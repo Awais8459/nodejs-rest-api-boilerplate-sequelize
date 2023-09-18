@@ -15,11 +15,10 @@ const tasksController = require('../controllers/tasksController');
 
 router.get('/tasks', tasksController.getAll);
 router.get('/tasks/:id', tasksController.getOne);
-router.post(
-	'/tasks',
-	[validationCreate, isTaskExistsCreate],
-	tasksController.create
-);
+
+router.post('/tasks',[validationCreate, isTaskExistsCreate],tasksController.create);
+
+
 router.put(
 	'/tasks',
 	[validationUpdate, isTaskExistsUpdate],

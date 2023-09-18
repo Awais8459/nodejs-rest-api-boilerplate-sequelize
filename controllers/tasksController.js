@@ -114,64 +114,146 @@ module.exports.delete = async (req, res, next) => {
 	}
 };
 
+// // Update Picture
+// module.exports.updatePicture = (req, res, next) => {
+// 	var form = new formidable.IncomingForm();
+// 	form.parse(req, (err, fields, files) => {
+// 		const id = fields.id;
+
+// 		if (!id) {
+// 			var err = new Error('ID not found.');
+// 			return next(err);
+// 		} else {
+// 			if (
+// 				files.filetoupload.name &&
+// 				!files.filetoupload.name.match(/\.(jpg|jpeg|png|webp)$/i)
+// 			) {
+// 				var err = new Error('Please select .jpg or .png file only');
+// 				return next(err);
+// 			} else if (files.filetoupload.size > 2097152) {
+// 				var err = new Error('Please select file size < 2mb');
+// 				return next(err);
+// 			} else {
+// 				var newFileName = utils.timestampFilename(files.filetoupload.name);
+
+// 				var oldpath = files.filetoupload.path;
+// 				var newpath = __basedir + '/public/uploads/pictures/' + newFileName;
+// 				fs.rename(oldpath, newpath, function (err) {
+// 					if (err) {
+// 						return next(err);
+// 					}
+
+// 					Task.update(
+// 						{
+// 							picture: newFileName,
+// 						},
+// 						{
+// 							where: {
+// 								id: {
+// 									[Op.eq]: id,
+// 								},
+// 							},
+// 						}
+// 					)
+// 						.then((updated) => {
+// 							res.json({
+// 								status: 'success',
+// 								result: {
+// 									newFileName: newFileName,
+// 									affectedRows: updated,
+// 								},
+// 							});
+// 						})
+// 						.catch((err) => {
+// 							return next(err);
+// 						});
+// 				});
+// 			}
+// 		}
+// 	});
+// };
+
+
+// ...
+const path = require('path');
+
+// ...
+
 // Update Picture
 module.exports.updatePicture = (req, res, next) => {
-	var form = new formidable.IncomingForm();
-	form.parse(req, (err, fields, files) => {
-		const id = fields.id;
+  var form = new formidable.IncomingForm();
+  form.parse(req, (err, fields, files) => {
+    const id = fields.id;
 
-		if (!id) {
-			var err = new Error('ID not found.');
-			return next(err);
-		} else {
-			if (
-				files.filetoupload.name &&
-				!files.filetoupload.name.match(/\.(jpg|jpeg|png)$/i)
-			) {
-				var err = new Error('Please select .jpg or .png file only');
-				return next(err);
-			} else if (files.filetoupload.size > 2097152) {
-				var err = new Error('Please select file size < 2mb');
-				return next(err);
-			} else {
-				var newFileName = utils.timestampFilename(files.filetoupload.name);
+    if (!id) {
+      var err = new Error('ID not found.');
+      return next(err);
+    } else {
+      if (
+        files.filetoupload.name &&
+        !files.filetoupload.name.match(/\.(jpg|jpeg|png)$/i)
+      ) {
+        var err = new Error('Please select .jpg or .png file only');
+        return next(err);
+      } else if (files.filetoupload.size > 2097152) {
+        var err = new Error('Please select a file size < 2mb');
+        return next(err);
+      } else {
+        var newFileName = utils.timestampFilename(files.filetoupload.name);
 
-				var oldpath = files.filetoupload.path;
-				var newpath = __basedir + '/public/uploads/pictures/' + newFileName;
-				fs.rename(oldpath, newpath, function (err) {
-					if (err) {
-						return next(err);
-					}
+        var oldpath = files.filetoupload.path;
+        var newpath = path.join(__dirname, '../public/uploads/pictures/', newFileName);
 
-					Task.update(
-						{
-							picture: newFileName,
-						},
-						{
-							where: {
-								id: {
-									[Op.eq]: id,
-								},
-							},
-						}
-					)
-						.then((updated) => {
-							res.json({
-								status: 'success',
-								result: {
-									newFileName: newFileName,
-									affectedRows: updated,
-								},
-							});
-						})
-						.catch((err) => {
-							return next(err);
-						});
-				});
-			}
-		}
-	});
+        var readStream = fs.createReadStream(oldpath);
+        var writeStream = fs.createWriteStream(newpath);
+
+        readStream.on('error', function (err) {
+          return next(err);
+        });
+
+        writeStream.on('error', function (err) {
+          return next(err);
+        });
+
+        readStream.pipe(writeStream);
+
+        readStream.on('end', function () {
+          fs.unlink(oldpath, function (err) {
+            if (err) {
+              return next(err);
+            }
+
+            Task.update(
+              {
+                picture: newFileName,
+              },
+              {
+                where: {
+                  id: {
+                    [Op.eq]: id,
+                  },
+                },
+              }
+            )
+              .then((updated) => {
+                res.json({
+                  status: 'success',
+                  result: {
+                    newFileName: newFileName,
+                    affectedRows: updated,
+                  },
+                });
+              })
+              .catch((err) => {
+                return next(err);
+              });
+          });
+        });
+      }
+    }
+  });
 };
+
 
 // Send email
 module.exports.sendEmail = async (req, res, next) => {
